@@ -1,0 +1,1035 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Game</title>
+<body>
+<!-- Import the Ga game engine files -->
+<script src="./ga.min.js"></script>
+<!--<script src="./plugins.js"></script>-->
+    <script src="./custom.min.js"></script>
+<script>
+var titlePage = true
+var controlPage = false
+var level1 = false
+var level2 = false
+var level3 = false
+var level4 = false
+var level5 = false
+var g = ga(
+  512, 700, titleSetup,
+    [
+        "./assets/virus.png",
+        "./assets/noarmor.png",
+        "./assets/armor.png",
+        "./assets/boss.png",
+        "./assets/sword.png",
+        "./assets/attack.png",
+        "./assets/health.png",
+        "./assets/exit.png",
+        "./assets/background.png"
+    ]
+);
+    //"./background.png","./virus.png","./health.png","./exit.png","./noarmor.png","./armor.png","./boss.png",
+g.canvas.style.border = "1px black dashed";
+g.backgroundColor = "white";
+g.start();
+var titleScene, controlScene, missionScene, background, player, enemies, bullets, shield, shieldBar, boss, bossBullets, exit, sword, swordswing, healthBar, bossHealth, message, gameScene, gameOverScene, angleBetween, walls;
+var lastDirection = 0;
+var hasSword = false;
+var hasGun = false;
+var lastDirection = 0;
+var enemiesNumber = 0;
+var numberOfBullets = 0;
+var bulletTimer = 0;
+var bulletFrequency = 60;
+var healed = false
+var armorTimer = 0;
+var armorOff = 300
+var bossArmor = true;
+var shieldTimer = 0
+var shieldOff = 60;
+var buttonSquare
+var controlSquare
+var backButton
+    
+function titleSetup(){
+    titleScene = g.group();
+    background = g.sprite("./assets/background.png")
+    background.scaleX = 6.3
+    background.scaleY = 10.5
+    background.x = 215
+    background.y = 310
+  titleScene.addChild(background)
+    var name = g.text("Invaders", "64px Futura", "white")
+    name.x = 150
+    name.y = (g.canvas.height-188) / 2 - 64
+    titleScene.addChild(name)
+    buttonSquare = g.rectangle(100, 100, "white", "1px black")
+    buttonSquare.x = 100
+    buttonSquare.y = 270
+    var playText = g.text("Play", "32px Futura", "black")
+    playText.x = 120
+    playText.y = 300
+    var playButton = g.group(buttonSquare, playText)
+    playButton.x = 20
+    playButton.y = 25
+    controlSquare = g.rectangle(150, 100, "white", "1px black")
+    controlSquare.x = 245
+    controlSquare.y = 295
+    var controlText = g.text("Controls", "32px Futura", "black")
+    controlText.x = 265
+    controlText.y = 325
+    controlButton = g.group(controlSquare, controlText)
+    titleScene.addChild(playButton)
+    titleScene.addChild(controlButton)
+    createPlayer()
+    
+    g.state = titlePlay
+}
+function titlePlay(){
+    g.move(player)
+    g.contain(player, {
+        x: 40,
+        y:40,
+        width: 475,
+        height: 500
+  });
+    if(g.hitTestRectangle(player, buttonSquare)){
+        titlePage = false
+        titleScene.visible = false
+        level1 = true
+        g.state = mission
+    }
+    else if(g.hitTestRectangle(player, controlSquare)){
+        titlePage = false
+        controlPage = true
+        titleScene.visible = false
+        g.state = controlSetup
+    }
+    else{}
+}
+var missionTimer = 0
+var missionTime = 300
+function mission(){
+    missionScene = g.group();
+    background = g.sprite("./assets/background.png")
+    background.scaleX = 6.3
+    background.scaleY = 10.5
+    background.x = 215
+    background.y = 310
+    missionScene.addChild(background)
+    var missionText = g.text("Mission", "64px Futura", "white", 40, 20)
+    missionText.y = 50
+    missionScene.addChild(missionText)
+    var line1 = g.text("- Invade the Computer", "30px Futura", "white", 20, 20)
+    line1.x = 50
+    line1.y = 150
+    missionScene.addChild(line1)
+    var line2 = g.text("- Survive against the defender", "30px Futura", "white", 20, 20)
+    line2.x = 50
+    line2.y = 225
+    missionScene.addChild(line2)
+    var line3 = g.text("- Use different Resources to", "30px Futura", "white", 20, 20)
+    line3.x = 50
+    line3.y = 300
+    missionScene.addChild(line3)
+    var line4 = g.text("Combat the Antivirus", "30px Futura", "white", 20, 20)
+    line4.x = 125
+    line4.y = 350
+    missionScene.addChild(line4)
+    var line5 = g.text("- SHUT DOWN EVERYTHING!", "30px Futura", "white", 20, 20)
+    line5.x = 50
+    line5.y = 425
+    missionScene.addChild(line5)
+    g.state = missionPlay
+}
+function missionPlay(){
+    missionTimer++
+    if(missionTimer == missionTime){
+        missionTimer = 0
+        g.state = setup
+    }
+}
+function controlSetup(){
+    controlScene = g.group()
+    controlScene.addChild(background)
+    var backSquare = g.rectangle(75, 50, "white", "1px black dashed")
+    var backText = g.text("Back", "16px Futura", "Black", 20, 15)
+    backButton = g.group(backSquare, backText)
+    backButton.x = 400
+    backButton.y = 512-80
+    controlScene.addChild(backButton)
+    var controlsTitle = g.text("Controls", "64px Futura", "white")
+    controlsTitle.x = 40
+    controlsTitle.y = 30
+    controlScene.addChild(controlsTitle)
+    var movementUp = g.text("Up Arrow - Move Up", "24px Futura", "white")
+    movementUp.y = 115
+    movementUp.x = 40
+    var movementDown = g.text("Down Arrow - Move Down", "24px Futura", "white")
+    movementDown.y = 165
+    movementDown.x = 40
+    var movementLeft = g.text("Left Arrow - Move Left", "24px Futura", "white")
+    movementLeft.y = 215
+    movementLeft.x = 40
+    var movementRight = g.text("Right Arrow - Move Right", "24px Futura", "white")
+    movementRight.y = 265
+    movementRight.x = 40
+    var swordButton = g.text("Space Button - Melee Attack (Locked)", "24px Futura", "white")
+    swordButton.y = 315
+    swordButton.x = 40
+    var gunButton = g.text("W Button -  Shoot Gun (Locked)", "24px Futura", "white")
+    gunButton.y = 365
+    gunButton.x = 40
+    var shieldButton = g.text("Q Button - Shield On (Locked)", "24px Futura", "white")
+    shieldButton.y = 415
+    shieldButton.x = 40
+    var movements = g.group(movementUp, movementDown, movementLeft, movementRight, swordButton, gunButton, shieldButton)
+    controlScene.addChild(movements)
+    movements.x = 25
+    createPlayer()
+    g.state = controlPlay
+}
+    
+function controlPlay(){
+    g.move(player)
+    g.contain(player, {
+        x: 40,
+        y:40,
+        width: 475,
+        height: 500
+  });
+    if(g.hitTestRectangle(player, backButton)){
+        titlePage = true
+        controlPage = false
+        controlScene.visible = false
+        g.state = titleSetup
+    }
+    
+}
+function createEnemies(normal, armor){
+    enemiesNumber = 0
+    var normal = normal
+    var armor = armor
+    var  spacing = 48,
+      xOffset = 150,
+      speed = 2,
+      direction = 1;
+    if (level2){
+        speed = 5
+    }
+    if(level4 || level5){
+        spacing = 50
+        xOffset = 75
+        speed = 3
+        if(level5){
+            speed = 5
+        }
+    }
+    enemies = []
+    for (var i = 0; i < normal; i++) {
+    var enemy = g.sprite("./assets/noarmor.png")
+    var x = g.randomInt(0, (g.canvas.height-188) - enemy.height);
+    var y = spacing * i + xOffset;
+    enemy.x = x;
+    enemy.y = y;
+    enemy.scaleX = 4
+    enemy.scaleY = 4
+    enemy.vx = speed * direction;
+    enemy.id = i
+    enemy.armor = false
+    direction *= -1;
+    enemies.push(enemy);
+    enemiesNumber++
+    gameScene.addChild(enemy);
+  }
+    for (var i = 0; i < armor; i++) {
+    var enemy = g.sprite("./assets/armor.png")
+    var x = g.randomInt(0, (g.canvas.height-188) - enemy.height);
+    var y = spacing * i+ + xOffset;
+    enemy.x = x;
+    enemy.y = y;
+    enemy.scaleX = 4
+    enemy.scaleY = 4
+    enemy.vx = speed * direction + 1;
+    enemy.id = i + normal
+    enemy.armor = true
+    direction *= -1;
+    enemies.push(enemy);
+    enemiesNumber++
+    gameScene.addChild(enemy);
+  }
+}
+function createHealthBar(){
+    var outerBar = g.rectangle(128, 16, "black"),
+        innerBar = g.rectangle(128, 16, "yellowGreen");
+    healthBar = g.group(outerBar, innerBar);
+    healthBar.inner = innerBar;
+    healthBar.x = g.canvas.width - 148;
+    healthBar.y = 20;
+    gameScene.addChild(healthBar);
+}
+function createShieldBar(){
+    var outerSBar = g.rectangle(128, 16, "black"),
+      innerSBar = g.rectangle(128, 16, "yellow");
+    shieldBar = g.group(outerSBar, innerSBar);
+    shieldBar.inner = innerSBar;
+    shieldBar.x = g.canvas.width - 148;
+    shieldBar.y = 50;
+    gameScene.addChild(shieldBar);
+}
+function createPlayer(){
+    if (titlePage || controlPage){
+        player = g.sprite("./assets/virus.png")
+        player.scaleX = 2.5
+        player.scaleY = 2.5
+        player.x = g.canvas.width / 2 - player.halfWidth;
+        player.y = g.canvas.height- 233;
+        if(titlePage){
+            titleScene.addChild(player);
+        }
+        else{
+            controlScene.addChild(player)
+        }
+    }
+    else{
+        player.x = g.canvas.width / 2 - player.halfWidth;
+        player.y = g.canvas.height - 233
+        player.shield = false
+        gameScene.addChild(player);
+    }
+    
+    g.key.leftArrow.press = function(){
+      player.vx = -5
+      lastDirection = 1
+      if(g.key.upArrow.isDown){
+          player.vy = -5
+      }
+      if(g.key.downArrow.isDown){
+          player.vy = 5
+      }
+  }
+  
+  g.key.leftArrow.release = function(){
+      if (!g.key.rightArrow.isDown){
+          player.vx = 0
+      }
+  }
+  
+  g.key.rightArrow.press = function(){
+      player.vx = 5
+      lastDirection = 2
+      if(g.key.upArrow.isDown){
+          player.vy = -5
+      }
+      if(g.key.downArrow.isDown){
+          player.vy = 5
+      }
+  }
+  
+  g.key.rightArrow.release = function(){
+      if (!g.key.leftArrow.isDown){
+          player.vx = 0
+      }
+  }
+  
+  g.key.upArrow.press = function(){
+      player.vy = -5
+      lastDirection = 3
+      if (g.key.rightArrow.isDown){
+          player.vx = 5
+      }
+      if (g.key.leftArrow.isDown){
+          player.vx = -5
+      }
+  }
+  
+  g.key.upArrow.release = function(){
+      if (!g.key.downArrow.isDown){
+          player.vy = 0
+      }
+  }
+  
+  g.key.downArrow.press = function(){
+      player.vy = 5
+      lastDirection = 4
+      if (g.key.rightArrow.isDown){
+          player.vx = 5
+      }
+      if (g.key.leftArrow.isDown){
+          player.vx = -5
+      }
+  }
+  
+  g.key.downArrow.release = function(){
+      if (!g.key.upArrow.isDown){
+          player.vy = 0
+      }
+  }
+}
+function setup() {
+  gameScene = g.group()
+  if(level1){
+      background = g.sprite("./assets/background.png")
+      background.scaleX = 6.3
+    background.scaleY = 10.5
+    background.x = 215
+    background.y = 310
+  gameScene.addChild(background)
+  }   
+  exit = g.sprite("./assets/exit.png")
+  exit.scaleX = 4
+  exit.scaleY = 4
+  exit.x = 50;
+  exit.y = 50;
+  gameScene.addChild(exit);
+  if(level1){
+        createPlayer()
+        createHealthBar()
+  }
+  else{
+      player.x = g.canvas.width / 2 - player.halfWidth;
+      player.y = g.canvas.height - 233;
+  }
+  if (hasSword){
+      swordswing.visible = false;
+      swordswing.x = player.x-16;
+      swordswing.y = player.y-16;
+      
+  }
+  if (level1 || level2){
+      createEnemies(6, 0)
+  }
+  if(level3){
+      hasGun = true
+      g.remove(healthPotion)
+      createEnemies(6,6)
+      bullets = []
+      if(lastDirection == 1){
+        angleToShoot = 3.14
+      } 
+      else if(lastDirection == 2){
+        angleToShoot = 0
+      }
+      else if(lastDirection == 3){
+        angleToShoot = 4.71
+      }
+      else if(lastDirection == 4){
+        angleToShoot = 1.57
+      }
+      else{
+        angleToShoot = 4.71
+      }
+      
+        g.keyboard(87).press = function(){
+          if(hasGun){
+              g.shoot(player, angleToShoot, 16, 7, bullets,
+               function(){
+                    bullet =  g.rectangle(5,5, "black")
+                    bullet.vy = 7;
+                    bullet.id = numberOfBullets
+                    numberOfBullets++;
+                    gameScene.addChild(bullet)
+                    return bullet 
+            })
+        }
+      }
+  }
+  if(level4 || level5){
+      createEnemies(0,8)
+      if(level4){
+          createShieldBar()
+          shield = g.circle(32, "yellow")
+          shield.alpha = 0.5
+      }
+      shield.x = player.x-10;
+  shield.y = player.y-10;
+      shield.visible = false
+      gameScene.addChild(shield)
+      walls = []
+      var wall = g.rectangle(400,10, "black")
+      wall.x = 0
+      wall.y = 410
+      wall.id = "left"
+      walls.push(wall)
+      gameScene.addChild(wall)
+      var wall1 = g.rectangle(412,10,"black")
+      wall1.x = 200
+      wall1.y = 310 
+      wall1.id = "right"
+      walls.push(wall1)
+      gameScene.addChild(wall1)
+      var wall2 = g.rectangle(50,10,"black")
+      wall2.x = 0
+      wall2.y = 310 
+      wall2.id = "left"
+      walls.push(wall2)
+      gameScene.addChild(wall2)
+    var wall3 = g.rectangle(250,10,"black")
+    wall3.x = 0
+    wall3.y = 210 
+    wall3.id = "left"
+    walls.push(wall3)
+    gameScene.addChild(wall3)
+    var wall4= g.rectangle(92,10,"black")
+    wall4.x = 420
+    wall4.y = 210 
+    wall4.id = "right"
+    walls.push(wall4)
+    gameScene.addChild(wall4)
+    var wall5 = g.rectangle(150,10,"black")
+    wall5.x = 0
+    wall5.y = 110 
+    wall5.id = "left"
+    walls.push(wall5)
+    gameScene.addChild(wall5)
+    var wall6= g.rectangle(212,10,"black")
+    wall6.x = 300
+    wall6.y = 110 
+    wall6.id = "right"
+    walls.push(wall6)
+    gameScene.addChild(wall6)
+      if(level5){
+          g.remove(healthPotion)
+      }
+  }
+  message = g.text("Game Over!", "64px Futura", "black", 20, 20);
+  message.x = 120;
+  message.y = (g.canvas.height-188) / 2 - 64;
+  gameOverScene = g.group();
+  background = g.sprite("./assets/background.png")
+    background.scaleX = 6.3
+    background.scaleY = 10.5
+    background.x = 215
+    background.y = 310
+  gameOverScene.addChild(background)
+    gameOverScene.addChild(message)
+  gameOverScene.visible = false;
+  
+  
+  
+  g.state = play;
+}
+function play() {
+  var playerHit = false; 
+  g.move(player);
+  g.contain(player, {
+        x: 40,
+        y:40,
+        width: 475,
+        height: 500
+  });
+  if (hasSword){
+      if(lastDirection == 1){
+            angleToShoot = 3.14
+            swordswing.x = player.x - 32
+            swordswing.y = player.y;
+        } 
+        else if(lastDirection == 2){
+            angleToShoot = 0
+            swordswing.x = player.x + 32
+            swordswing.y = player.y;
+        }
+        else if(lastDirection == 3){
+            angleToShoot = 4.71
+            swordswing.y = player.y - 32
+            swordswing.x = player.x;
+        }
+        else if(lastDirection == 4){
+            angleToShoot = 1.57
+            swordswing.y = player.y + 32
+            swordswing.x = player.x;
+        }
+        else{
+            angleToShoot = 4.71
+            swordswing.x = player.x-16;
+            swordswing.y = player.y-16;
+        }
+    g.key.space.press = function(){
+        swordswing.visible = true;
+        var enemies1 = enemies.filter(function(enemy){
+            if (g.hitTestCircleRectangle(swordswing, enemy)){
+                var check = enemy.id
+                for(var i = 0; i < enemiesNumber; i++){
+                    if (enemies[i].id == check){
+                        g.remove(enemies[i]);
+                        enemies.splice(i, 1);
+                        enemiesNumber -= 1;
+                    }
+                }
+            }
+        })
+    }
+    g.key.space.release = function(){
+        swordswing.visible = false;
+    }
+  }
+    
+  if(level3 || level4 || level5){
+      g.move(bullets)
+      var enemies2 = enemies.filter(function(enemy){
+        var bullet1 = bullets.filter(function(bullet){
+            if(g.hitTestRectangle(bullet, enemy)){
+                var check = enemy.id
+                var bcheck = bullet.id
+                if (enemy.armor == false){
+                    for(var i = 0; i < enemiesNumber; i++){
+                        if (enemies[i].id == check){
+                            g.remove(enemies[i]);
+                            enemies.splice(i, 1);
+                            enemiesNumber -= 1;
+                        }
+                    }
+                    for(var x = 0; x< numberOfBullets; x++){
+                        if (bullets[x].id == bcheck){
+                            g.remove(bullets[x])
+                            bullets.splice(x, 1)
+                            numberOfBullets-=1
+                        }
+                    }
+                }
+                else{
+                   for(var i = 0; i < enemiesNumber; i++){
+                        if (enemies[i].id == check){
+                            enemies[i].armor = false
+                            var newEnemy = g.sprite("./assets/noarmor.png")
+                            newEnemy.x = enemies[i].x;
+                            newEnemy.y = enemies[i].y;
+                            newEnemy.vx = enemies[i].vx;
+                            newEnemy.armor = false
+                            newEnemy.id = enemies[i].id
+                            newEnemy.direction = enemies[i].direction;
+                            var deleteE = enemies[i]
+                            enemies[i] = newEnemy
+                            gameScene.addChild(newEnemy)
+                            g.remove(deleteE)
+                        }
+                    } 
+                    for(var x = 0; x< numberOfBullets; x++){
+                        if (bullets[x].id == bcheck){
+                            g.remove(bullets[x])
+                            bullets.splice(x, 1)
+                            numberOfBullets-=1
+                        }
+                    }
+                }
+            }
+        })
+    })
+    if(level4 || level5){
+        shield.x = player.x-10;
+        shield.y = player.y-10;
+        g.keyboard(81).press = function(){
+        shield.visible = true
+        player.shield = true
+        }
+        g.keyboard(81).release = function(){
+        shield.visible = false
+        player.shield = false
+        }
+        if(player.shield == true){
+            shieldTimer++
+        }
+        if(player.shield == true && shieldTimer != shieldOff){
+            if(shieldBar.inner.width > 0){
+                shieldBar.inner.width -= 128/shieldOff
+            }
+        }
+        else{
+            shieldTimer = 0
+        }
+        if (player.shield == false){
+            if(shieldBar.inner.width < 128){
+                shieldBar.inner.width += 128/shieldOff
+            }
+        }
+        if (shieldBar.inner.width == 0){
+            shield.visible = false
+            player.shield = false
+        }
+        var wall1 = walls.filter(function(wall){
+            g.rectangleCollision(player, wall)
+            if(level5){
+                if(g.rectangleCollision(player, wall) != undefined){
+                    playerHit = true
+                }
+                var bullet3= bullets.filter(function(bullet){
+                if(g.hitTestRectangle(bullet, wall)){
+                    var bcheck = bullet.id
+                    for(var x = 0; x< numberOfBullets; x++){
+                        if (bullets[x].id == bcheck){
+                            g.remove(bullets[x])
+                            bullets.splice(x, 1)
+                            numberOfBullets-=1
+                            }
+                        }
+                    }
+                })
+            }
+        })
+    }
+  }
+  enemies.forEach(function(enemy) {
+    g.move(enemy);
+    var enemyHitsEdges = g.contain(enemy, {
+        x: 40,
+        y:40,
+        width: 475,
+        height: 500
+  });
+    if (enemyHitsEdges === "left" || enemyHitsEdges === "right") {
+      enemy.vx *= -1;
+    }
+    if(g.hitTestRectangle(player, enemy) && player.shield == false) {
+     playerHit = true;
+    } 
+  });
+  if(playerHit) {
+    player.alpha = 0.5;
+    healthBar.inner.width -= 1;
+  } else {
+    player.alpha = 1;
+  }
+  if (healthBar.inner.width < 0) {
+    g.state = end;
+    message.content = "You lost!";
+  } 
+    
+  if (g.hitTestCircleRectangle(player,exit))
+      {
+          g.state = bossSetup;
+      }
+}
+    
+function bossSetup(){
+    enemies.forEach(function(enemy){
+        gameScene.removeChild(enemy)
+    })
+    if(level1){
+        sword = g.sprite("./assets/sword.png")
+        sword.x = g.canvas.width- 20 - sword.width-20
+        sword.y = g.canvas.height - 188 - sword.height-30
+        sword.scaleX = 2
+        sword.scaleY = 2    
+        gameScene.addChild(sword);
+    }
+    swordswing = g.sprite("./assets/attack.png");
+    swordswing.visible = false;
+    swordswing.scaleX = 8
+      swordswing.scaleY = 8
+    boss = g.sprite("./assets/boss.png")
+    boss.x = g.canvas.width / 2 - boss.halfWidth
+    boss.y = (g.canvas.height-188) / 2 - boss.halfWidth
+    boss.scaleX = 4
+    boss.scaleY = 4
+    //boss.vx = Math.floor(Math.random() * (5 - (-5) + 1) ) + (-5);
+    //boss.vy = Math.floor(Math.random() * (5 - (-5) + 1) ) + (-5);
+    boss.dead = false
+    gameScene.addChild(boss);
+    
+    if(level1 || level2){
+        var outerBar = g.rectangle(128, 16, "black"),
+            innerBar = g.rectangle(128, 16, "yellowGreen");
+        bossHealth = g.group(outerBar, innerBar);
+        bossHealth.inner = innerBar;
+        bossHealth.x = g.canvas.width - 375;
+        bossHealth.y = 20;
+        gameScene.addChild(bossHealth);
+    }
+    else{
+        var outerBar = g.rectangle(128, 16, "black"),
+            innerBar = g.rectangle(128, 16, "yellowGreen"),
+            armorBar = g.rectangle(128, 16, "yellow")
+        bossHealth = g.group(outerBar, innerBar, armorBar);
+        bossHealth.inner = innerBar;
+        bossHealth.armor = armorBar;
+        bossHealth.x = g.canvas.width - 350;
+        bossHealth.y = 30;
+        gameScene.addChild(bossHealth);
+    }
+    if(level2 || level4){
+        healthPotion = g.sprite("./assets/health.png");
+        healthPotion.x = g.canvas.width - healthPotion.width -60
+        healthPotion.y = (g.canvas.height-188) - healthPotion.height - 30
+        healthPotion.scaleX = 4
+        healthPotion.scaleY = 4
+        gameScene.addChild(healthPotion)
+    }
+    if(level4 || level5){
+        walls.forEach(function(wall){
+            gameScene.removeChild(wall)
+        })
+    }
+    bulletTimer = 0
+    bossBullets = []
+    player.x = g.canvas.width / 2 - player.halfWidth;
+    player.y = (g.canvas.height-188) - player.height - 45;
+    healed = false
+    g.state = bossPlay;
+}
+    
+function bossPlay(){
+    var playerHit = false;
+    g.move(player);
+    g.move(boss)
+    g.contain(player, {
+        x: 40,
+        y:40,
+        width: 475,
+        height: 500
+  });
+    var bossHitsEdges = g.contain(boss, {
+        x: 10,
+        y:23,
+        width: 498,
+        height: 492
+  });
+    if (bossHitsEdges === "left" || bossHitsEdges === "right" || bossHitsEdges === "top" || bossHitsEdges === "bottom") {
+      var newx = 0;
+      var newy = 0;
+      //while(newx == 0 && newy == 0)
+          {
+              newx = Math.floor(Math.random() * (5 - (-5) + 1) ) + (-5);
+              newy = Math.floor(Math.random() * (5 - (-5) + 1) ) + (-5);
+          }
+      boss.vx = newx;
+      boss.vy = newy;
+    }
+    
+    if (hasSword || g.hitTestRectangle(player, sword)){
+        hasSword = true
+        sword.visible = false
+        if(lastDirection == 1){
+            angleToShoot = 3.14
+            swordswing.x = player.x - 32
+            swordswing.y = player.y;
+        } 
+        else if(lastDirection == 2){
+            angleToShoot = 0
+            swordswing.x = player.x + 32
+            swordswing.y = player.y;
+        }
+        else if(lastDirection == 3){
+            angleToShoot = 4.71
+            swordswing.y = player.y - 32
+            swordswing.x = player.x;
+        }
+        else if(lastDirection == 4){
+            angleToShoot = 1.57
+            swordswing.y = player.y + 32
+            swordswing.x = player.x;
+        }
+        else{
+            angleToShoot = 4.71
+            swordswing.x = player.x-16;
+            swordswing.y = player.y-16;
+        }
+    }
+    
+    g.key.space.press = function(){
+        if(hasSword == true){
+            swordswing.visible = true;
+        }
+        if(g.hitTestCircleRectangle(swordswing, boss)){
+            if(level3){
+                if(bossArmor == false){
+                    bossHealth.inner.width -= 5;
+                }
+            }
+            else{
+                bossHealth.inner.width -= 5;
+            }
+        }
+    }
+    g.key.space.release = function(){
+        swordswing.visible = false;
+    }
+    if (level2 || level3 || level4 || level5){
+        if(level2 || level4){
+            if (g.hitTestRectangle(player, healthPotion) && !healed){
+                if(healthBar.inner.width + 25 > 128 && healthBar.inner.width + 25 < 153){
+                    healthBar.inner.width = 128
+                    healed = true
+                    healthPotion.visible = false
+                }
+                if (healthBar.inner.width + 25 < 128){
+                    healthBar.inner.width += 25
+                    healed = true
+                    healthPotion.visible = false
+                }
+            }
+        }
+        
+        angleBetween = Math.atan2(boss.y - player.y, boss.x - player.x) - Math.PI;
+        bulletTimer++;
+        if(!boss.dead){
+            if (bulletTimer == bulletFrequency){
+                g.shoot(boss, angleBetween, 0, 5, bossBullets, function(){
+                bullet =  g.rectangle(10,10, "black");
+                gameScene.addChild(bullet)
+                return bullet;
+                })
+                bulletTimer = 0;
+            }
+            var bullet2 = bossBullets.filter(function(bullet){
+                if(g.hitTestRectangle(player, bullet) && player.shield == false){
+                    playerHit = true
+                    return true
+                }
+                else{
+                    return false
+                }
+            })
+        }
+        if(level3||level4 || level5){
+            var bullet2 = bullets.filter(function(bullet){
+                if(g.hitTestRectangle(boss, bullet) && boss.dead == false){
+                    var bcheck = bullet.id
+                    if(level3 || level4){
+                        if(bossArmor == false){
+                            bossHealth.inner.width -= 5
+                        }
+                    }
+                    for(var b = 0; b < numberOfBullets; b++){
+                        if(bullets[b].id == bcheck){
+                            g.remove(bullets[b])
+                            bullets.splice(b, 1)
+                            numberOfBullets--;
+                            bossHealth.armor.visible = false
+                            bossArmor = false
+                        }
+                    }
+                }
+            })
+            g.move(bullets)
+            if(level4){
+                shield.x = player.x-10;
+                shield.y = player.y-10;
+                g.keyboard(81).press = function(){
+                    shield.visible = true
+                    player.shield = true
+                }
+                g.keyboard(81).release = function(){
+                    shield.visible = false
+                    player.shield = false
+                }
+                if(player.shield == true){
+                    shieldTimer++
+                }
+                if(player.shield == true && shieldTimer != shieldOff){
+                    if(shieldBar.inner.width > 0){
+                        shieldBar.inner.width -= 2
+                    }
+                }
+                else{
+                    shieldTimer = 0
+                }
+                if (player.shield == false){
+                    if(shieldBar.inner.width < 120){
+                        shieldBar.inner.width += 2
+                    }
+                }
+                if (shieldBar.inner.width == 0){
+                    shield.visible = false
+                    player.shield = false
+                }
+            }
+        }
+        g.move(bossBullets)
+        
+        if(bossArmor == false){
+            g.key.space.press = function(){
+                swordswing.visible = true;
+                var time = 60
+                if(g.hitTestCircleRectangle(swordswing, boss) && bossArmor == false){
+                bossHealth.inner.width -= 5;
+                }
+            }
+            g.key.space.release = function(){
+                swordswing.visible = false;
+            }
+            armorTimer++;
+        }
+        if (armorTimer == armorOff){
+            armorTimer = 0;
+            bossArmor = true;
+            bossHealth.armor.visible = true
+        }
+    }
+    
+    if(g.hitTestRectangle(boss, player) && !boss.dead && player.shield == false) {
+     playerHit = true;
+    }
+    if(playerHit) {
+        player.alpha = 0.5;
+        healthBar.inner.width -= 1;
+    } 
+    else {
+        player.alpha = 1;
+    }
+    if (healthBar.inner.width < 0) {
+        g.state = end;
+        message.content = "You lost!";
+    } 
+    if(bossHealth.inner.width < 0 && !boss.dead)
+        {
+            g.remove(boss)
+            g.remove(bossHealth)
+            boss.dead = true
+        }
+    if (g.hitTestCircleRectangle(player,exit) && boss.dead)
+      {
+          if(level1){
+              level1 = false
+              level2 = true
+              g.state = setup;
+          }
+          else if(level2){
+              bossBullets.forEach(function(bullet){
+            gameScene.removeChild(bullet)
+            })
+              level2 = false
+              level3 = true
+              g.state = setup;
+          }
+          else if(level3){
+              level3 = false
+              level4 = true
+              g.state = setup
+          }
+          else if(level4){
+              level4 = false
+              level5 = true
+              g.state = setup
+          }
+          else if(level4){
+              level5 = false
+              message.content = "You Win!"
+              g.state = end
+          }
+          else{
+              g.state = end
+          }
+      }
+}
+function end() {
+    gameScene.visible = false;
+    titleScene.visible = false
+    missionScene.visible = false
+    gameOverScene.visible = true;
+    missionTimer++
+    if(missionTimer == missionTime){
+      titlePage = true
+      controlPage = false
+      level1 = false
+      level2 = false
+      level3 = false
+      level4 = false
+      level5 = false
+      hasSword = false
+      hasGun = false
+      missionTimer = 0
+      g.state = titleSetup
+  }
+}
+</script>
+</body>
